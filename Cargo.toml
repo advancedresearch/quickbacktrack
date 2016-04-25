@@ -4,5 +4,8 @@ version = "0.1.0"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 description = "Library for back tracking with customizable search for moves"
 keywords = ["back", "track", "puzzle", "procedural", "generation"]
+license = "MIT"
+repository = "https://github.com/bvssvni/quickbacktrack.git"
+homepage = "https://github.com/bvssvni/quickbacktrack"
 
 [dependencies]
