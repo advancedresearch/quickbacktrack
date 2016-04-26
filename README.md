@@ -49,9 +49,30 @@ total weight: 0.7999999999999999
 total value: 1340
 ```
 
-To run, open up in Terminal and type:
+To run, open up Terminal and type:
 
 ```
 cargo run --example knapsack
 ```
 
+### 8 Queens
+
+```
+_ _ _ _ _ _ _ _
+|_|_|_|_|_|_|_|x|
+|_|_|_|x|_|_|_|_|
+|x|_|_|_|_|_|_|_|
+|_|_|x|_|_|_|_|_|
+|_|_|_|_|_|_|_|_|
+|_|_|_|_|_|_|_|_|
+|_|_|_|_|_|_|_|_|
+|_|_|_|_|_|_|_|_|
+
+Guess 4, 6 depth 5 6
+```
+
+To run, open up Terminal and type:
+
+```
+cargo run --example eight_queens
+```
