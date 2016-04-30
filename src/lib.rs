@@ -160,6 +160,14 @@ impl SolveSettings {
     }
 }
 
+/// Contains solution.
+pub struct Solution<T> {
+    /// The solved puzzle.
+    pub puzzle: T,
+    /// The number of iterations used to solve the puzzle.
+    pub iterations: u64,
+}
+
 /// Solvees puzzles using back tracking.
 pub struct BackTrackSolver<T>
     where T: Puzzle
@@ -185,13 +193,13 @@ impl<T> BackTrackSolver<T>
 	}
 
     /// Solves puzzle, using a closure to look for best position to set a value next.
-	pub fn solve<F>(mut self, mut f: F) -> Option<T>
+	pub fn solve<F>(mut self, mut f: F) -> Option<Solution<T>>
 		where F: FnMut(&T) -> Option<T::Pos>
 	{
 		use std::thread::sleep;
 		use std::time::Duration;
 
-		let mut iterations: usize = 0;
+		let mut iterations: u64 = 0;
 		loop {
             if self.settings.debug {
                 if let Some(ms) = self.settings.sleep_ms {
@@ -214,7 +222,7 @@ impl<T> BackTrackSolver<T>
                 if self.settings.difference {
 				    new.remove(&self.states[0]);
                 }
-				return Some(new);
+				return Some(Solution { puzzle: new, iterations: iterations });
 			}
 
 			let empty = match f(&new) {

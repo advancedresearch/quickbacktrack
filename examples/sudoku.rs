@@ -199,7 +199,7 @@ fn main() {
 	let solver = BackTrackSolver::new(x, settings);
 	// Try `find_empty` and `find_freq_empty` for comparison.
 	let difference = solver.solve(|s| s.find_min_empty())
-		.expect("Expected solution");
+		.expect("Expected solution").puzzle;
 	println!("Difference:");
 	difference.print();
 }

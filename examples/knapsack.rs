@@ -145,7 +145,7 @@ fn main() {
             return None;
         }) {
             None => break,
-            Some(x) => x
+            Some(x) => x.puzzle
         };
         answer.print();
         println!("total weight: {}", answer.total_weight());

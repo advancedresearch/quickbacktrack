@@ -10,7 +10,7 @@ use quickbacktrack::{BackTrackSolver, Puzzle, SolveSettings};
 
 #[derive(Clone)]
 pub struct EightQueens {
-    pub queens: [u8; 8],
+    pub queens: Vec<u8>,
 }
 
 impl Puzzle for EightQueens {
@@ -24,10 +24,13 @@ impl Puzzle for EightQueens {
     }
 
     fn print(&self) {
-        println!(" _ _ _ _ _ _ _ _ ");
-        for y in 0..8 {
+        for _ in 0..self.queens.len() {
+            print!(" _");
+        }
+        println!("");
+        for y in 0..self.queens.len() {
             print!("|");
-            for x in 0..8 {
+            for x in 0..self.queens.len() as u8 {
                 let q = self.queens[y];
                 if q > 0 && q - 1 == x {
                     print!("x|");
@@ -45,7 +48,7 @@ impl Puzzle for EightQueens {
         if self.queens[pos] > 0 {
             res.push(self.queens[pos]);
         } else {
-            for v in 1..9 {
+            for v in 1..(self.queens.len() + 1) as u8 {
                 if self.is_valid(pos, v) {
                     res.push(v);
                 }
@@ -62,7 +65,7 @@ impl Puzzle for EightQueens {
     }
 
     fn remove(&mut self, other: &EightQueens) {
-        for i in 0..8 {
+        for i in 0..self.queens.len() {
             if other.queens[i] > 0 {
                 self.queens[i] = 0;
             }
@@ -71,9 +74,9 @@ impl Puzzle for EightQueens {
 }
 
 impl EightQueens {
-    pub fn new() -> EightQueens {
+    pub fn new(size: usize) -> EightQueens {
         EightQueens {
-            queens: [0; 8]
+            queens: vec![0; size]
         }
     }
 
@@ -93,10 +96,24 @@ impl EightQueens {
     }
 
     pub fn next_pos(&self) -> Option<usize> {
-        for i in 0..8 {
+        for i in 0..self.queens.len() {
             if self.queens[i] == 0 { return Some(i); }
         }
         return None;
+    }
+
+    pub fn find_min_pos(&self) -> Option<usize> {
+        let mut min: Option<usize> = None;
+        let mut min_possible: Option<usize> = None;
+        for i in 0..self.queens.len() {
+            if self.queens[i] > 0 { continue; }
+            let possible = self.possible(i);
+            if min.is_none() || possible.len() < min_possible.unwrap() {
+                min_possible = Some(possible.len());
+                min = Some(i);
+            }
+        }
+        return min;
     }
 }
 
@@ -106,12 +123,13 @@ fn can_take(a: [i8; 2], b: [i8; 2]) -> bool {
 }
 
 fn main() {
-    let board = EightQueens::new();
+    let board = EightQueens::new(8);
     let settings = SolveSettings::new()
         .debug(true)
         .sleep_ms(100)
     ;
     let solver = BackTrackSolver::new(board, settings);
-    let answer = solver.solve(|board| board.next_pos()).expect("Expected solution");
-    answer.print();
+    let answer = solver.solve(|board| board.find_min_pos()).expect("Expected solution");
+    // answer.puzzle.print();
+    println!("{}", answer.iterations);
 }
