@@ -91,6 +91,7 @@ pub struct SolveSettings {
     debug: bool,
     difference: bool,
     sleep_ms: Option<u64>,
+    max_iterations: Option<u64>,
 }
 
 impl SolveSettings {
@@ -101,6 +102,7 @@ impl SolveSettings {
             debug: false,
             difference: false,
             sleep_ms: None,
+            max_iterations: None,
         }
     }
 
@@ -158,6 +160,28 @@ impl SolveSettings {
         self.set_sleep_ms(val);
         self
     }
+
+    /// Sets the maximum number of iterations before giving up.
+    pub fn set_maybe_max_iterations(&mut self, val: Option<u64>) {
+        self.max_iterations = val;
+    }
+
+    /// The maximum number of iterations before giving up.
+    pub fn maybe_max_iterations(mut self, val: Option<u64>) -> Self {
+        self.set_maybe_max_iterations(val);
+        self
+    }
+
+    /// Sets the maximum number of iterations before giving up.
+    pub fn set_max_iterations(&mut self, val: u64) {
+        self.max_iterations = Some(val);
+    }
+
+    /// The maximum number of iterations before giving up.
+    pub fn max_iterations(mut self, val: u64) -> Self {
+        self.set_max_iterations(val);
+        self
+    }
 }
 
 /// Contains solution.
@@ -172,108 +196,109 @@ pub struct Solution<T> {
 pub struct BackTrackSolver<T>
     where T: Puzzle
 {
-	/// Stores the states.
-	pub states: Vec<T>,
-	/// Stores the choices for the states.
-	pub choice: Vec<(T::Pos, Vec<T::Val>)>,
-	/// Search for simple solutions.
-	pub settings: SolveSettings,
+    /// Stores the states.
+    pub states: Vec<T>,
+    /// Stores the choices for the states.
+    pub choice: Vec<(T::Pos, Vec<T::Val>)>,
+    /// Search for simple solutions.
+    pub settings: SolveSettings,
 }
 
 impl<T> BackTrackSolver<T>
     where T: Puzzle
 {
     /// Creates a new solver.
-	pub fn new(puzzle: T, settings: SolveSettings) -> BackTrackSolver<T> {
-		BackTrackSolver {
-			states: vec![puzzle],
-			choice: vec![],
-			settings: settings,
-		}
-	}
+    pub fn new(puzzle: T, settings: SolveSettings) -> BackTrackSolver<T> {
+        BackTrackSolver {
+            states: vec![puzzle],
+            choice: vec![],
+            settings: settings,
+        }
+    }
 
     /// Solves puzzle, using a closure to look for best position to set a value next.
-	pub fn solve<F>(mut self, mut f: F) -> Option<Solution<T>>
-		where F: FnMut(&T) -> Option<T::Pos>
-	{
-		use std::thread::sleep;
-		use std::time::Duration;
+    pub fn solve<F>(mut self, mut f: F) -> Option<Solution<T>>
+        where F: FnMut(&T) -> Option<T::Pos>
+    {
+        use std::thread::sleep;
+        use std::time::Duration;
 
-		let mut iterations: u64 = 0;
-		loop {
+        let mut iterations: u64 = 0;
+        loop {
             if self.settings.debug {
                 if let Some(ms) = self.settings.sleep_ms {
-        			sleep(Duration::from_millis(ms));
+                    sleep(Duration::from_millis(ms));
                 }
             }
-			let n = self.states.len() - 1;
-			let mut new = self.states[n].clone();
-			if self.settings.solve_simple {
-				new.solve_simple();
-			}
+            let n = self.states.len() - 1;
+            let mut new = self.states[n].clone();
+            if self.settings.solve_simple {
+                new.solve_simple();
+            }
             if self.settings.debug {
-    			new.print();
+                new.print();
             }
-			iterations += 1;
-			if new.is_solved() {
-                if self.settings.debug {
-				    println!("Solved! Iterations: {}", iterations);
-                }
-                if self.settings.difference {
-				    new.remove(&self.states[0]);
-                }
-				return Some(Solution { puzzle: new, iterations: iterations });
-			}
-
-			let empty = match f(&new) {
-                None => {
-                    if self.settings.debug {
-                        println!("No more possible choices");
-                    }
+            iterations += 1;
+            if let Some(max_iterations) = self.settings.max_iterations {
+                if iterations > max_iterations {
                     return None;
                 }
-                Some(x) => x
-            };
-			let mut possible = new.possible(empty);
-			if possible.len() == 0 {
-				// println!("No possible at {:?}", empty);
-				loop {
-					if self.choice.len() == 0 {
-                        if self.settings.debug {
-    						// No more possible choices.
-    						println!("No more possible choices");
-                        }
-						return None;
-					}
-					let (pos, mut possible) = self.choice.pop().unwrap();
-					if let Some(new_val) = possible.pop() {
-						// Try next choice.
-						let n = self.states.len() - 1;
-						self.states[n].set(pos, new_val);
-						self.choice.push((pos, possible));
-                        if self.settings.debug {
-    						println!("Try   {:?}, {:?} depth {} {} (failed at {:?})",
-    							pos, new_val, self.choice.len(), self.states.len(), empty);
-                        }
-						break;
-					} else {
-						if self.states.pop().is_none() {
-							// No more possible choices.
-							return None;
-						}
-					}
-				}
-			} else {
-				// Put in the first guess.
-				let v = possible.pop().unwrap();
-				new.set(empty, v);
-				self.choice.push((empty, possible));
-				self.states.push(new);
+            }
+            if new.is_solved() {
                 if self.settings.debug {
-				    println!("Guess {:?}, {:?} depth {} {}",
+                    println!("Solved! Iterations: {}", iterations);
+                }
+                if self.settings.difference {
+                    new.remove(&self.states[0]);
+                }
+                return Some(Solution { puzzle: new, iterations: iterations });
+            }
+
+            let empty = f(&new);
+            let mut possible = match empty {
+                None => vec![],
+                Some(x) => new.possible(x)
+            };
+            if possible.len() == 0 {
+                // println!("No possible at {:?}", empty);
+                loop {
+                    if self.choice.len() == 0 {
+                        if self.settings.debug {
+                            // No more possible choices.
+                            println!("No more possible choices");
+                        }
+                        return None;
+                    }
+                    let (pos, mut possible) = self.choice.pop().unwrap();
+                    if let Some(new_val) = possible.pop() {
+                        // Try next choice.
+                        let n = self.states.len() - 1;
+                        self.states[n].set(pos, new_val);
+                        self.choice.push((pos, possible));
+                        if self.settings.debug {
+                            println!("Try   {:?}, {:?} depth {} {} (failed at {:?})",
+                                pos, new_val, self.choice.len(), self.states.len(), empty);
+                        }
+                        break;
+                    } else {
+                        if self.states.pop().is_none() {
+                            // No more possible choices.
+                            return None;
+                        }
+                    }
+                }
+            } else {
+                let empty = empty.unwrap();
+                // Put in the first guess.
+                let v = possible.pop().unwrap();
+                new.set(empty, v);
+                self.choice.push((empty, possible));
+                self.states.push(new);
+                if self.settings.debug {
+                    println!("Guess {:?}, {:?} depth {} {}",
                         empty, v, self.choice.len(), self.states.len());
                 }
-			}
-		}
-	}
+            }
+        }
+    }
 }

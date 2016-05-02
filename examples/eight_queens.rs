@@ -102,6 +102,16 @@ impl EightQueens {
         return None;
     }
 
+    pub fn next_imp_pos(&self) -> Option<usize> {
+        // If it is impossible to place a queen in any row,
+        // then the puzzle is impossible to solve.
+        for i in 0..self.queens.len() {
+            if self.queens[i] > 0 { continue; }
+            if self.possible(i).len() == 0 { return None; };
+        }
+        return self.next_pos();
+    }
+
     pub fn find_min_pos(&self) -> Option<usize> {
         let mut min: Option<usize> = None;
         let mut min_possible: Option<usize> = None;
@@ -115,6 +125,16 @@ impl EightQueens {
         }
         return min;
     }
+
+    pub fn find_imp_pos(&self) -> Option<usize> {
+        // If it is impossible to place a queen in any row,
+        // then the puzzle is impossible to solve.
+        for i in 0..self.queens.len() {
+            if self.queens[i] > 0 { continue; }
+            if self.possible(i).len() == 0 { return None; };
+        }
+        return self.find_min_pos();
+    }
 }
 
 fn can_take(a: [i8; 2], b: [i8; 2]) -> bool {
@@ -123,13 +143,23 @@ fn can_take(a: [i8; 2], b: [i8; 2]) -> bool {
 }
 
 fn main() {
-    let board = EightQueens::new(8);
-    let settings = SolveSettings::new()
-        .debug(true)
-        .sleep_ms(100)
-    ;
-    let solver = BackTrackSolver::new(board, settings);
-    let answer = solver.solve(|board| board.find_min_pos()).expect("Expected solution");
-    // answer.puzzle.print();
-    println!("{}", answer.iterations);
+    for i in 8..9 {
+        let max_iterations = 300_000;
+        let board = EightQueens::new(i);
+        let settings = SolveSettings::new()
+            .debug(true)
+            .sleep_ms(100)
+            .max_iterations(max_iterations)
+        ;
+        let solver = BackTrackSolver::new(board, settings);
+        match solver.solve(|board| board.find_min_pos()) {
+            None => {
+                println!("{} >{}", i, max_iterations);
+            }
+            Some(x) => {
+                // answer.puzzle.print();
+                println!("{} {}", i, x.iterations);
+            }
+        }
+    }
 }
