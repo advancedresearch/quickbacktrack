@@ -43,20 +43,6 @@ impl Puzzle for EightQueens {
         println!("")
     }
 
-    fn possible(&self, pos: usize) -> Vec<u8> {
-        let mut res = vec![];
-        if self.queens[pos] > 0 {
-            res.push(self.queens[pos]);
-        } else {
-            for v in 1..(self.queens.len() + 1) as u8 {
-                if self.is_valid(pos, v) {
-                    res.push(v);
-                }
-            }
-        }
-        return res;
-    }
-
     fn is_solved(&self) -> bool {
         for q in &self.queens {
             if *q == 0 { return false; }
@@ -135,6 +121,20 @@ impl EightQueens {
         }
         return self.find_min_pos();
     }
+
+    pub fn possible(&self, pos: usize) -> Vec<u8> {
+        let mut res = vec![];
+        if self.queens[pos] > 0 {
+            res.push(self.queens[pos]);
+        } else {
+            for v in 1..(self.queens.len() + 1) as u8 {
+                if self.is_valid(pos, v) {
+                    res.push(v);
+                }
+            }
+        }
+        return res;
+    }
 }
 
 fn can_take(a: [i8; 2], b: [i8; 2]) -> bool {
@@ -152,7 +152,8 @@ fn main() {
             .max_iterations(max_iterations)
         ;
         let solver = BackTrackSolver::new(board, settings);
-        match solver.solve(|board| board.find_min_pos()) {
+        match solver.solve(|board| board.find_min_pos(),
+                           |board, p| board.possible(p)) {
             None => {
                 println!("{} >{}", i, max_iterations);
             }

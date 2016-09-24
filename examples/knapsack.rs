@@ -59,20 +59,6 @@ impl Puzzle for Bag {
             }
         }
     }
-
-    fn possible(&self, ind: usize) -> Vec<bool> {
-        let mut res = vec![];
-        if self.get(ind) {
-            res.push(true);
-        } else {
-            let item = self.item_info(ind);
-            if self.total_weight() + item.weight
-                <= self.max_weight {
-                res.push(true);
-            }
-        }
-        return res;
-    }
 }
 
 impl Bag {
@@ -123,6 +109,20 @@ impl Bag {
         }
         return sum;
     }
+
+    fn possible(&self, ind: usize) -> Vec<bool> {
+        let mut res = vec![];
+        if self.get(ind) {
+            res.push(true);
+        } else {
+            let item = self.item_info(ind);
+            if self.total_weight() + item.weight
+                <= self.max_weight {
+                res.push(true);
+            }
+        }
+        return res;
+    }
 }
 
 fn main() {
@@ -143,7 +143,7 @@ fn main() {
                 if !bag.get(i) { return Some(i); }
             }
             return None;
-        }) {
+        }, |bag, ind| bag.possible(ind)) {
             None => break,
             Some(x) => x.puzzle
         };

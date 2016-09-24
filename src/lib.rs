@@ -69,9 +69,6 @@ pub trait Puzzle: Clone {
     fn set(&mut self, pos: Self::Pos, val: Self::Val);
     /// Print puzzle out to standard output.
     fn print(&self);
-    /// Returns possible values at a given position.
-    /// The last move in the list has highest priority, because the solver pops the values in turn.
-    fn possible(&self, pos: Self::Pos) -> Vec<Self::Val>;
     /// Whether puzzle is solved.
     fn is_solved(&self) -> bool;
     /// Removes values from other puzzle to show changes.
@@ -216,9 +213,14 @@ impl<T> BackTrackSolver<T>
         }
     }
 
-    /// Solves puzzle, using a closure to look for best position to set a value next.
-    pub fn solve<F>(mut self, mut f: F) -> Option<Solution<T>>
-        where F: FnMut(&T) -> Option<T::Pos>
+    /// Solves puzzle, using a closure to look for best position to set a value next,
+    /// and a closure for picking options in preferred order.
+    ///
+    /// The second closure returns possible values at a given position.
+    /// The last move in the list has highest priority, because the solver pops the values in turn.
+    pub fn solve<F, G>(mut self, mut f: F, mut g: G) -> Option<Solution<T>>
+        where F: FnMut(&T) -> Option<T::Pos>,
+              G: FnMut(&T, T::Pos) -> Vec<T::Val>
     {
         use std::thread::sleep;
         use std::time::Duration;
@@ -257,7 +259,7 @@ impl<T> BackTrackSolver<T>
             let empty = f(&new);
             let mut possible = match empty {
                 None => vec![],
-                Some(x) => new.possible(x)
+                Some(x) => g(&new, x)
             };
             if possible.len() == 0 {
                 // println!("No possible at {:?}", empty);

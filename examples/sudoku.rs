@@ -75,35 +75,6 @@ impl Puzzle for Sodoku {
 		}
 	}
 
-	fn possible(&self, pos: [usize; 2]) -> Vec<u8> {
-		let mut res = vec![];
-		if self.slots[pos[1]][pos[0]] != 0 {
-			res.push(self.slots[pos[1]][pos[0]]);
-			return res;
-		}
-		'next_val: for v in 1..10 {
-			for x in 0..9 {
-				if self.slots[pos[1]][x] == v {
-					continue 'next_val;
-				}
-				if self.slots[x][pos[0]] == v {
-					continue 'next_val;
-				}
-			}
-			let block_x = 3 * (pos[0] / 3);
-			let block_y = 3 * (pos[1] / 3);
-			for y in block_y..block_y + 3 {
-				for x in block_x..block_x + 3 {
-					if self.slots[y][x] == v {
-						continue 'next_val;
-					}
-				}
-			}
-			res.push(v);
-		}
-		return res;
-	}
-
 	fn is_solved(&self) -> bool {
 		for y in 0..9 {
 			for x in 0..9 {
@@ -184,6 +155,35 @@ impl Sodoku {
 		}
 		return self.find_empty();
 	}
+
+	fn possible(&self, pos: [usize; 2]) -> Vec<u8> {
+		let mut res = vec![];
+		if self.slots[pos[1]][pos[0]] != 0 {
+			res.push(self.slots[pos[1]][pos[0]]);
+			return res;
+		}
+		'next_val: for v in 1..10 {
+			for x in 0..9 {
+				if self.slots[pos[1]][x] == v {
+					continue 'next_val;
+				}
+				if self.slots[x][pos[0]] == v {
+					continue 'next_val;
+				}
+			}
+			let block_x = 3 * (pos[0] / 3);
+			let block_y = 3 * (pos[1] / 3);
+			for y in block_y..block_y + 3 {
+				for x in block_x..block_x + 3 {
+					if self.slots[y][x] == v {
+						continue 'next_val;
+					}
+				}
+			}
+			res.push(v);
+		}
+		return res;
+	}
 }
 
 fn main() {
@@ -198,7 +198,7 @@ fn main() {
 	;
 	let solver = BackTrackSolver::new(x, settings);
 	// Try `find_empty` and `find_freq_empty` for comparison.
-	let difference = solver.solve(|s| s.find_min_empty())
+	let difference = solver.solve(|s| s.find_min_empty(), |s, p| s.possible(p))
 		.expect("Expected solution").puzzle;
 	println!("Difference:");
 	difference.print();
