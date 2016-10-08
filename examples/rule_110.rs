@@ -2,8 +2,11 @@
 
 Rule 110 is a simple cellular automaton that is universal.
 
-The problem is to find the reverse history from a final state,
-up to a limited number of iterations.
+For more information, see https://en.wikipedia.org/wiki/Rule_110
+
+This solver reconstructs a space-time of cell states from known states.
+It works remarkably well, considering the simple strategy of picking
+the most constrained cell.
 
 */
 
@@ -34,6 +37,7 @@ impl Rule110 {
 
     /// Returns `false` when a contradition is found.
     /// This is checked by checking all affected cells in next step.
+    /// Also checks the previous step.
     pub fn is_satisfied(&self, pos: [usize; 2], val: u8) -> bool {
         let row = pos[0];
         let col = pos[1] as isize;
