@@ -23,9 +23,9 @@ impl Rule110 {
         let mut new_row = vec![0; n];
         for i in 0..n {
             let input = (
-                if i > 0 { last[(i + n - 1)%n] } else { 1 },
+                last[(i + n - 1) % n],
                 last[i],
-                if i + 1 < n { last[i + 1] } else { 1 }
+                last[(i + 1) % n]
             );
             new_row[i] = rule(input);
         }
@@ -38,29 +38,25 @@ impl Rule110 {
         let row = pos[0];
         let col = pos[1] as isize;
 
+        let n = self.cells[row].len() as isize;
         if row + 1 < self.cells.len() {
             // Replace with new value if looking up cell at the location.
             let f = |ind: isize| {
-                if ind < 0 { return 1; }
-                if ind >= self.cells[row].len() as isize { 1 }
-                else if ind == col { val }
-                else { self.cells[row][ind as usize] }
+                let map_ind = ((col + ind + n) % n) as usize;
+                if map_ind == col as usize { val }
+                else { self.cells[row][map_ind] }
             };
+            // [o o x] [o x o] [x o o]
             for i in -1..2 {
-                // Skip output cells at the edges.
-                if col + i <= 0 ||
-                   col + i >= self.cells[row].len() as isize {
-                    continue;
-                }
-
                 let input = (
-                    f(col + i - 1),
-                    f(col + i),
-                    f(col + i + 1),
+                    f(i - 1),
+                    f(i),
+                    f(i + 1),
                 );
 
+                let col_next = ((col + n + i) % n) as usize;
                 let new_value = rule(input);
-                let old_value = self.cells[row + 1][(col + i) as usize];
+                let old_value = self.cells[row + 1][col_next];
                 match (new_value, old_value) {
                     (_, 0) => {}
                     (0, _) => {}
@@ -73,14 +69,13 @@ impl Rule110 {
         // Check that previous row yields value.
         if row > 0 {
             let f = |ind: isize| {
-                if ind < 0 { return 1; }
-                if ind >= self.cells[row - 1].len() as isize { 1 }
-                else { self.cells[row - 1][ind as usize] }
+                let map_ind = ((col + ind + n) % n) as usize;
+                self.cells[row - 1][map_ind]
             };
             let input = (
-                f(col - 1),
-                f(col),
-                f(col + 1),
+                f(-1),
+                f(0),
+                f(1),
             );
             match (rule(input), val) {
                 (_, 0) => {}
@@ -156,7 +151,22 @@ impl Puzzle for Rule110 {
     type Pos = [usize; 2];
     type Val = u8;
 
-    fn solve_simple(&mut self) {}
+    fn solve_simple(&mut self) {
+        loop {
+			let mut found_any = false;
+			for i in 0..self.cells.len() {
+				for j in 0..self.cells[i].len() {
+					if self.cells[i][j] != 0 { continue; }
+					let possible = self.possible([i, j]);
+					if possible.len() == 1 {
+						self.cells[i][j] = possible[0];
+						found_any = true;
+					}
+				}
+			}
+			if !found_any { break; }
+		}
+    }
 
     fn set(&mut self, pos: [usize; 2], val: u8) {
         self.cells[pos[0]][pos[1]] = val;
@@ -185,8 +195,8 @@ impl Puzzle for Rule110 {
         println!("");
         for row in &self.cells {
             for cell in row {
-                if *cell == 2 { print!("x"); }
-                else if *cell == 1 { print!("_"); }
+                if *cell == 2 { print!("o"); }
+                else if *cell == 1 { print!("."); }
                 else { print!(" "); }
             }
             println!("")
@@ -196,33 +206,37 @@ impl Puzzle for Rule110 {
 }
 
 fn main() {
-    /*
-    let mut r = Rule110 {
-        cells: vec![
-            // _xx__xxxx_xx__x
-            vec![1, 2, 2, 1, 1, 2, 2, 2, 2, 1, 2, 2, 1, 1, 2]
-        ]
-    };
-    let next = r.next();
-    r.cells.push(next);
-    r.print();
-    return;
-    */
-
     let x = Rule110 {
         cells: vec![
             vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            vec![2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 2, 0],
         ]
     };
-    // println!("{}", x.is_satisfied([0, 1], 2));
 
     let settings = SolveSettings::new()
-		.solve_simple(false)
+		.solve_simple(true)
 		.debug(false)
-		.difference(false)
+		.difference(true)
 		.sleep_ms(50)
 	;
     let solver = BackTrackSolver::new(x, settings);
@@ -230,8 +244,6 @@ fn main() {
 		.expect("Expected solution").puzzle;
 	println!("Solution:");
 	difference.print();
-    println!("{}\n{:?}", difference.cells.len(),
-        difference.cells[2]);
 }
 
 pub fn example1() -> Rule110 {
