@@ -177,11 +177,22 @@ impl Puzzle for Rule110 {
     }
 
     fn is_solved(&self) -> bool {
+        // All cells must be non-empty.
         for row in &self.cells {
             for col in row {
                 if *col == 0 { return false; }
             }
         }
+
+        // All cells must satisfy the constraints.
+        for i in 0..self.cells.len() {
+            for j in 0..self.cells[i].len() {
+                if !self.is_satisfied([i, j], self.cells[i][j]) {
+                    return false;
+                }
+            }
+        }
+
         true
     }
 
@@ -210,6 +221,17 @@ impl Puzzle for Rule110 {
 }
 
 fn main() {
+    /*
+    let mut r = Rule110 {
+        cells: vec![
+            vec![1, 0, 2, 1]
+        ]
+    };
+    let next = r.next();
+    r.cells.push(next);
+    r.print();
+    */
+
     let x = Rule110 {
         cells: vec![
             vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -240,7 +262,7 @@ fn main() {
     let settings = SolveSettings::new()
 		.solve_simple(true)
 		.debug(false)
-		.difference(true)
+		.difference(false)
 		.sleep_ms(50)
 	;
     let solver = BackTrackSolver::new(x, settings);
