@@ -1,6 +1,6 @@
 /*
 
-Sodoku is a puzzle where you fill numbers 1-9 until every row, column and group contains 1-9.
+Sudoku is a puzzle where you fill numbers 1-9 until every row, column and group contains 1-9.
 
 For more information, see https://en.wikipedia.org/wiki/Sudoku
 
@@ -14,11 +14,11 @@ extern crate quickbacktrack;
 use quickbacktrack::{BackTrackSolver, Puzzle, SolveSettings};
 
 #[derive(Clone)]
-pub struct Sodoku {
+pub struct Sudoku {
 	pub slots: [[u8; 9]; 9],
 }
 
-impl Puzzle for Sodoku {
+impl Puzzle for Sudoku {
 	type Pos = [usize; 2];
 	type Val = u8;
 
@@ -43,7 +43,7 @@ impl Puzzle for Sodoku {
 		self.slots[pos[1]][pos[0]] = val;
 	}
 
-	fn remove(&mut self, other: &Sodoku) {
+	fn remove(&mut self, other: &Sudoku) {
 		for y in 0..9 {
 			for x in 0..9 {
 				if other.slots[y][x] != 0 {
@@ -85,7 +85,7 @@ impl Puzzle for Sodoku {
 	}
 }
 
-impl Sodoku {
+impl Sudoku {
 
 	pub fn find_empty(&self) -> Option<[usize; 2]> {
 		for y in 0..9 {
@@ -187,7 +187,7 @@ impl Sodoku {
 }
 
 fn main() {
-	let x = example2();
+	let x = example4();
 	x.print();
 
 	let settings = SolveSettings::new()
@@ -204,8 +204,8 @@ fn main() {
 	difference.print();
 }
 
-pub fn example1() -> Sodoku {
-	Sodoku {
+pub fn example1() -> Sudoku {
+	Sudoku {
 		slots: [
 			[0, 4, 1, 0, 9, 0, 2, 0, 0],
 			[9, 2, 6, 5, 0, 0, 1, 0, 0],
@@ -220,8 +220,8 @@ pub fn example1() -> Sodoku {
 	}
 }
 
-pub fn example2() -> Sodoku {
-	Sodoku {
+pub fn example2() -> Sudoku {
+	Sudoku {
 		slots: [
 			// [8, 3, 0, 0, 0, 0, 7, 0, 0],
 			// [0, 0, 6, 0, 3, 4, 0, 2, 0],
@@ -237,6 +237,42 @@ pub fn example2() -> Sodoku {
 			[0, 2, 0, 0, 0, 9, 0, 7, 8],
 			[0, 4, 0, 6, 1, 0, 5, 0, 0],
 			[0, 0, 8, 0, 0, 0, 0, 1, 3],
+		]
+	}
+}
+
+pub fn example3() -> Sudoku {
+	Sudoku {
+		slots: [
+			[0, 0, 3, 2, 0, 1, 0, 5, 0],
+			[0, 0, 0, 8, 0, 0, 9, 0, 0],
+			[0, 4, 5, 0, 0, 3, 0, 0, 1],
+
+			[0, 0, 7, 0, 0, 0, 0, 0, 6],
+			[4, 0, 0, 0, 0, 0, 0, 0, 8],
+			[6, 0, 0, 0, 0, 0, 3, 0, 0],
+
+			[5, 0, 0, 7, 0, 0, 8, 9, 0],
+			[0, 0, 1, 0, 0, 9, 0, 0, 0],
+			[0, 6, 0, 5, 0, 8, 2, 0, 0],
+		]
+	}
+}
+
+pub fn example4() -> Sudoku {
+	Sudoku {
+		slots: [
+			[0, 5, 0, 0, 9, 6, 0, 7, 0],
+			[2, 0, 9, 8, 0, 0, 0, 0, 0],
+			[0, 0, 0, 0, 0, 0, 6, 0, 1],
+
+			[0, 1, 0, 0, 6, 2, 0, 0, 5],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0],
+			[8, 0, 0, 5, 1, 0, 0, 6, 0],
+
+			[4, 0, 1, 0, 0, 0, 0, 0, 0],
+			[0, 0, 0, 0, 0, 7, 3, 0, 9],
+			[0, 9, 0, 1, 8, 0, 0, 2, 0],
 		]
 	}
 }
