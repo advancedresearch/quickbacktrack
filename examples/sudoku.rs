@@ -348,6 +348,10 @@ fn main() {
 		(Sudoku::find_min_potential, Sudoku::possible_max_future),
 		(Sudoku::find_min_potential, Sudoku::possible_maxmin_future),
 		(Sudoku::find_min_potential, Sudoku::possible_max_future2),
+		(Sudoku::find_empty, Sudoku::possible),
+		(Sudoku::find_empty, Sudoku::possible_max_future),
+		(Sudoku::find_empty, Sudoku::possible_maxmin_future),
+		(Sudoku::find_empty, Sudoku::possible_max_future2),
 		(Sudoku::find_min_empty, |s: &Sudoku, p: [usize; 2]| combine(vec![
 				s.possible(p),
 				s.possible_max_future(p),
@@ -355,6 +359,12 @@ fn main() {
 				s.possible_max_future2(p),
 			])),
 		(Sudoku::find_min_potential, |s: &Sudoku, p: [usize; 2]| combine(vec![
+				s.possible(p),
+				s.possible_max_future(p),
+				s.possible_maxmin_future(p),
+				s.possible_max_future2(p),
+			])),
+		(Sudoku::find_empty, |s: &Sudoku, p: [usize; 2]| combine(vec![
 				s.possible(p),
 				s.possible_max_future(p),
 				s.possible_maxmin_future(p),
@@ -375,15 +385,15 @@ fn main() {
 
 example		best
 1			1
-2			5
+2			4
 3			5
 4			7
 5			29
-6			7
+6			4
 7			13
 8			3
-9			6
-10			24
+9			5
+10			23
 
 */
 
