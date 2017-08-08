@@ -46,6 +46,8 @@
 
 #![deny(missing_docs)]
 
+extern crate fnv;
+
 use std::fmt::Debug;
 
 /// Implemented by puzzles.
@@ -187,6 +189,8 @@ pub struct Solution<T> {
     pub puzzle: T,
     /// The number of iterations used to solve the puzzle.
     pub iterations: u64,
+    /// The strategy that found the solution.
+    pub strategy: Option<usize>,
 }
 
 /// Solvees puzzles using back tracking.
@@ -253,7 +257,7 @@ impl<T> BackTrackSolver<T>
                 if self.settings.difference {
                     new.remove(&self.states[0]);
                 }
-                return Some(Solution { puzzle: new, iterations: iterations });
+                return Some(Solution { puzzle: new, iterations: iterations, strategy: None });
             }
 
             let empty = f(&new);
@@ -303,4 +307,166 @@ impl<T> BackTrackSolver<T>
             }
         }
     }
+}
+
+/// Solves puzzle using multiple strategies at the same time.
+/// Each strategy is evaluated one step by turn until a solution is found.
+pub struct MultiBackTrackSolver<T>
+    where T: Puzzle
+{
+    /// Stores the states.
+    pub states: Vec<Vec<T>>,
+    /// Stores the choices for the states.
+    pub choice: Vec<Vec<(T::Pos, Vec<T::Val>)>>,
+    /// Search for simple solutions.
+    pub settings: SolveSettings,
+}
+
+impl<T> MultiBackTrackSolver<T>
+    where T: Puzzle
+{
+    /// Creates a new solver.
+    pub fn new(settings: SolveSettings) -> MultiBackTrackSolver<T> {
+        MultiBackTrackSolver {
+            states: vec![],
+            choice: vec![],
+            settings: settings,
+        }
+    }
+
+    /// Solves puzzle, using a closure to look for best position to set a value next,
+    /// and a closure for picking options in preferred order.
+    ///
+    /// The second closure returns possible values at a given position.
+    /// The last move in the list has highest priority, because the solver pops the values in turn.
+    ///
+    /// If you have problems compiling, annotate type `(fn(&_) -> _, fn(&_, _) -> _)` to
+    /// the list of strategies, e.g. `Vec<(fn(&_) -> _, fn(&_, _) -> _)>` or
+    /// `&[(fn(&_) -> _, fn(&_, _) -> _)]`.
+    pub fn solve(
+        mut self,
+        puzzle: T,
+        strategies: &[(fn(&T) -> Option<T::Pos>, fn(&T, T::Pos) -> Vec<T::Val>)]
+    ) -> Option<Solution<T>> {
+        use std::thread::sleep;
+        use std::time::Duration;
+
+        self.states = vec![vec![puzzle]; strategies.len()];
+        self.choice = vec![vec![]; strategies.len()];
+        let mut iterations: u64 = 0;
+        loop {
+            if self.settings.debug {
+                if let Some(ms) = self.settings.sleep_ms {
+                    sleep(Duration::from_millis(ms));
+                }
+            }
+
+            iterations += 1;
+            if let Some(max_iterations) = self.settings.max_iterations {
+                if iterations > max_iterations {
+                    return None;
+                }
+            }
+
+            for i in 0..strategies.len() {
+                let ref mut states = self.states[i];
+                let ref mut choice = self.choice[i];
+                let (f, g) = strategies[i];
+
+                let n = states.len() - 1;
+                let mut new = states[n].clone();
+                if self.settings.solve_simple {
+                    new.solve_simple();
+                }
+                if self.settings.debug {
+                    println!("Strategy {}", i);
+                    new.print();
+                }
+                if new.is_solved() {
+                    if self.settings.debug {
+                        println!("Solved! Iterations: {}", iterations);
+                    }
+                    if self.settings.difference {
+                        new.remove(&states[0]);
+                    }
+                    return Some(Solution { puzzle: new, iterations: iterations, strategy: Some(i) });
+                }
+
+                let empty = f(&new);
+                let mut possible = match empty {
+                    None => vec![],
+                    Some(x) => g(&new, x)
+                };
+                if possible.len() == 0 {
+                    // println!("No possible at {:?}", empty);
+                    loop {
+                        if choice.len() == 0 {
+                            if self.settings.debug {
+                                // No more possible choices.
+                                println!("No more possible choices");
+                            }
+                            return None;
+                        }
+                        let (pos, mut possible) = choice.pop().unwrap();
+                        if let Some(new_val) = possible.pop() {
+                            // Try next choice.
+                            let n = states.len() - 1;
+                            states[n].set(pos, new_val);
+                            choice.push((pos, possible));
+                            if self.settings.debug {
+                                println!("Try   {:?}, {:?} depth {} {} (failed at {:?})",
+                                    pos, new_val, choice.len(), states.len(), empty);
+                            }
+                            break;
+                        } else {
+                            if states.pop().is_none() {
+                                // No more possible choices.
+                                return None;
+                            }
+                        }
+                    }
+                } else {
+                    let empty = empty.unwrap();
+                    // Put in the first guess.
+                    let v = possible.pop().unwrap();
+                    new.set(empty, v);
+                    choice.push((empty, possible));
+                    states.push(new);
+                    if self.settings.debug {
+                        println!("Guess {:?}, {:?} depth {} {}",
+                            empty, v, choice.len(), states.len());
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Combines multiple priority lists together.
+///
+/// This is used to combine strategies into a new one.
+/// Sometimes this is better than using either strategy.
+pub fn combine<T>(lists: Vec<Vec<T>>) -> Vec<T>
+	where T: Clone + ::std::hash::Hash + Eq
+{
+	let mut priority: fnv::FnvHashMap<T, usize> = fnv::FnvHashMap::default();
+	for list in &lists {
+		for (i, ch) in list.iter().enumerate() {
+			if priority.contains_key(ch) {
+				let old = priority[ch];
+				priority.insert(ch.clone(), old + i);
+			} else {
+				priority.insert(ch.clone(), i);
+			}
+		}
+	}
+
+	let keys: Vec<&T> = priority.keys().collect();
+	let mut inds: Vec<usize> = (0..keys.len()).collect();
+	inds.sort_by_key(|&ind| priority[keys[ind]]);
+	let mut res = Vec::with_capacity(keys.len());
+	for &ind in &inds {
+		res.push(keys[ind].clone());
+	}
+	res
 }

@@ -11,7 +11,7 @@ for picking the next empty slot.
 
 extern crate quickbacktrack;
 
-use quickbacktrack::{BackTrackSolver, Puzzle, SolveSettings};
+use quickbacktrack::{combine, MultiBackTrackSolver, Puzzle, SolveSettings};
 
 #[derive(Clone)]
 pub struct Sudoku {
@@ -115,6 +115,29 @@ impl Sudoku {
 		return min_pos;
 	}
 
+	pub fn find_min_potential(&self) -> Option<[usize; 2]> {
+		let mut min = None;
+		let mut min_pos = None;
+		for y in 0..9 {
+			for x in 0..9 {
+				if self.slots[y][x] == 0 {
+					let possible = self.possible_max_future([x, y]);
+					if possible.len() > 0 {
+						let mut experiment = self.clone();
+						experiment.set([x, y], possible[0]);
+						let potential = experiment.potential();
+						if potential == 0 {continue;}
+						if min.is_none() || min.unwrap() > potential {
+							min = Some(potential);
+							min_pos = Some([x, y]);
+						}
+					}
+				}
+			}
+		}
+		return min_pos;
+	}
+
 	pub fn find_freq_empty(&self) -> Option<[usize; 2]> {
 		// Find the frequency of each numbers.
 		let mut freq = [0; 9];
@@ -156,7 +179,7 @@ impl Sudoku {
 		return self.find_empty();
 	}
 
-	fn possible(&self, pos: [usize; 2]) -> Vec<u8> {
+	pub fn possible(&self, pos: [usize; 2]) -> Vec<u8> {
 		let mut res = vec![];
 		if self.slots[pos[1]][pos[0]] != 0 {
 			res.push(self.slots[pos[1]][pos[0]]);
@@ -184,25 +207,185 @@ impl Sudoku {
 		}
 		return res;
 	}
+
+	pub fn potential(&self) -> usize {
+		let mut sum_possible = 0;
+		for y in 0..9 {
+			for x in 0..9 {
+				let n = self.possible([x, y]).len();
+				if n == 0 {
+					return 0;
+				}
+				sum_possible += n;
+			}
+		}
+		sum_possible
+	}
+
+	pub fn possible_max_future(&self, pos: [usize; 2]) -> Vec<u8> {
+		let choices = self.possible(pos);
+		if choices.len() == 1 {return choices;}
+		let mut potential = vec![];
+		'choice: for &choice in &choices {
+			let mut experiment = self.clone();
+			experiment.set(pos, choice);
+			let mut sum_possible = 0;
+			for y in 0..9 {
+				for x in 0..9 {
+					let n = experiment.possible([x, y]).len();
+					if n == 0 {
+						potential.push(0);
+						continue 'choice;
+					}
+					sum_possible += n;
+				}
+			}
+			potential.push(sum_possible);
+		}
+
+		let mut inds: Vec<usize> = (0..choices.len()).collect();
+		inds.sort_by_key(|&i| potential[i]);
+		inds.reverse();
+		let mut new_choices = Vec::with_capacity(choices.len());
+		for &ind in &inds {
+			new_choices.push(choices[ind]);
+		}
+		new_choices
+	}
+
+	pub fn possible_maxmin_future(&self, pos: [usize; 2]) -> Vec<u8> {
+		let choices = self.possible(pos);
+		if choices.len() == 1 {return choices;}
+		let mut potential = vec![];
+		'choice: for &choice in &choices {
+			let mut experiment = self.clone();
+			experiment.set(pos, choice);
+			let mut maxmin = None;
+			for y in 0..9 {
+				for x in 0..9 {
+					let n = experiment.possible([x, y]).len();
+					if n == 0 {
+						potential.push(0);
+						continue 'choice;
+					}
+					if maxmin.is_none() || maxmin.unwrap() > n {
+						maxmin = Some(n);
+					}
+				}
+			}
+			potential.push(maxmin.unwrap_or(0));
+		}
+
+		let mut inds: Vec<usize> = (0..choices.len()).collect();
+		inds.sort_by_key(|&i| potential[i]);
+		inds.reverse();
+		let mut new_choices = Vec::with_capacity(choices.len());
+		for &ind in &inds {
+			new_choices.push(choices[ind]);
+		}
+		new_choices
+	}
+
+	pub fn possible_max_future2(&self, pos: [usize; 2]) -> Vec<u8> {
+		let choices = self.possible(pos);
+		if choices.len() == 1 {return choices;}
+		let mut potential = vec![];
+		'choice: for &choice in &choices {
+			let mut experiment = self.clone();
+			experiment.set(pos, choice);
+			let mut sum_possible = 0;
+			for y in 0..9 {
+				for x in 0..9 {
+					let possible = experiment.possible([x, y]);
+					if possible.len() == 0 {
+						potential.push(0);
+						continue 'choice;
+					}
+					let weight = possible.len();
+					for &val in &possible {
+						let mut experiment2 = experiment.clone();
+						experiment2.set([x, y], val);
+						for y2 in 0..9 {
+							for x2 in 0..9 {
+								sum_possible += weight * experiment2.possible([x2, y2]).len();
+							}
+						}
+					}
+
+				}
+			}
+			potential.push(sum_possible);
+		}
+
+		let mut inds: Vec<usize> = (0..choices.len()).collect();
+		inds.sort_by_key(|&i| potential[i]);
+		// inds.reverse();
+		let mut new_choices = Vec::with_capacity(choices.len());
+		for &ind in &inds {
+			new_choices.push(choices[ind]);
+		}
+		new_choices
+	}
 }
 
 fn main() {
-	let x = example4();
+	let x = example10();
 	x.print();
 
 	let settings = SolveSettings::new()
-		.solve_simple(false)
-		.debug(true)
+		.solve_simple(true)
+		.debug(false)
 		.difference(true)
 		.sleep_ms(500)
 	;
-	let solver = BackTrackSolver::new(x, settings);
-	// Try `find_empty` and `find_freq_empty` for comparison.
-	let difference = solver.solve(|s| s.find_min_empty(), |s, p| s.possible(p))
-		.expect("Expected solution").puzzle;
+	let solver = MultiBackTrackSolver::new(settings);
+	let strategies: Vec<(fn(&_) -> _, fn(&_, _) -> _)> = vec![
+		(Sudoku::find_min_empty, Sudoku::possible),
+		(Sudoku::find_min_empty, Sudoku::possible_max_future),
+		(Sudoku::find_min_empty, Sudoku::possible_maxmin_future),
+		(Sudoku::find_min_empty, Sudoku::possible_max_future2),
+		(Sudoku::find_min_potential, Sudoku::possible),
+		(Sudoku::find_min_potential, Sudoku::possible_max_future),
+		(Sudoku::find_min_potential, Sudoku::possible_maxmin_future),
+		(Sudoku::find_min_potential, Sudoku::possible_max_future2),
+		(Sudoku::find_min_empty, |s: &Sudoku, p: [usize; 2]| combine(vec![
+				s.possible(p),
+				s.possible_max_future(p),
+				s.possible_maxmin_future(p),
+				s.possible_max_future2(p),
+			])),
+		(Sudoku::find_min_potential, |s: &Sudoku, p: [usize; 2]| combine(vec![
+				s.possible(p),
+				s.possible_max_future(p),
+				s.possible_maxmin_future(p),
+				s.possible_max_future2(p),
+			])),
+	];
+
+	let solution = solver.solve(x, &strategies)
+		.expect("Expected solution");
+
 	println!("Difference:");
-	difference.print();
+	solution.puzzle.print();
+	println!("Non-trivial moves: {}", solution.iterations);
+	println!("Strategy: {}", solution.strategy.unwrap_or(0));
 }
+
+/*
+
+example		best
+1			1
+2			5
+3			5
+4			7
+5			29
+6			7
+7			13
+8			3
+9			6
+10			24
+
+*/
 
 pub fn example1() -> Sudoku {
 	Sudoku {
@@ -273,6 +456,114 @@ pub fn example4() -> Sudoku {
 			[4, 0, 1, 0, 0, 0, 0, 0, 0],
 			[0, 0, 0, 0, 0, 7, 3, 0, 9],
 			[0, 9, 0, 1, 8, 0, 0, 2, 0],
+		]
+	}
+}
+
+pub fn example5() -> Sudoku {
+	Sudoku {
+		slots: [
+			[8, 0, 0, 6, 9, 0, 3, 0, 0],
+			[0, 0, 1, 0, 0, 8, 0, 0, 0],
+			[0, 3, 0, 5, 0, 0, 0, 9, 0],
+
+			[1, 0, 0, 0, 0, 0, 4, 0, 0],
+			[7, 0, 0, 0, 8, 0, 0, 0, 2],
+			[0, 0, 6, 0, 0, 0, 0, 0, 1],
+
+			[0, 1, 0, 0, 0, 2, 0, 3, 0],
+			[0, 0, 0, 8, 0, 0, 2, 0, 0],
+			[0, 0, 2, 0, 7, 6, 0, 0, 4],
+		]
+	}
+}
+
+pub fn example6() -> Sudoku {
+	Sudoku {
+		slots: [
+			[0, 5, 0, 9, 7, 0, 2, 0, 0],
+			[0, 0, 8, 0, 0, 4, 0, 0, 3],
+			[1, 4, 0, 0, 0, 0, 0, 0, 0],
+
+			[2, 0, 0, 0, 9, 0, 0, 0, 0],
+			[0, 1, 0, 3, 0, 2, 0, 5, 0],
+			[0, 0, 0, 0, 5, 0, 0, 0, 8],
+
+			[0, 0, 0, 0, 0, 0, 0, 1, 2],
+			[9, 0, 0, 8, 0, 0, 7, 0, 0],
+			[0, 0, 1, 0, 4, 7, 0, 3, 0],
+		]
+	}
+}
+
+pub fn example7() -> Sudoku {
+	Sudoku {
+		slots: [
+			[4, 0, 0, 7, 8, 0, 0, 0, 2],
+			[8, 5, 0, 0, 0, 0, 0, 3, 0],
+			[0, 0, 0, 0, 0, 2, 6, 0, 0],
+
+			[0, 2, 0, 0, 0, 0, 0, 0, 0],
+			[0, 3, 0, 5, 0, 6, 0, 1, 0],
+			[0, 0, 0, 0, 0, 0, 0, 4, 0],
+
+			[0, 0, 5, 6, 0, 0, 0, 0, 0],
+			[0, 9, 0, 0, 0, 0, 0, 6, 1],
+			[2, 0, 0, 0, 7, 9, 0, 0, 5],
+		]
+	}
+}
+
+pub fn example8() -> Sudoku {
+	Sudoku {
+		slots: [
+			[0, 0, 0, 4, 0, 0, 0, 0, 7],
+			[1, 0, 6, 0, 0, 0, 9, 0, 5],
+			[0, 4, 0, 9, 0, 0, 0, 0, 8],
+
+			[0, 0, 7, 0, 8, 0, 0, 6, 0],
+			[0, 0, 0, 7, 0, 9, 0, 0, 0],
+			[0, 8, 0, 0, 3, 0, 1, 0, 0],
+
+			[9, 0, 0, 0, 0, 5, 0, 8, 0],
+			[5, 0, 1, 0, 0, 0, 2, 0, 6],
+			[8, 0, 0, 0, 0, 2, 0, 0, 0],
+		]
+	}
+}
+
+pub fn example9() -> Sudoku {
+	Sudoku {
+		slots: [
+			[0, 0, 0, 0, 0, 0, 0, 0, 3],
+			[9, 3, 0, 8, 0, 0, 0, 0, 5],
+			[0, 0, 0, 0, 7, 0, 6, 1, 0],
+
+			[0, 0, 0, 0, 2, 1, 5, 0, 0],
+			[0, 6, 0, 4, 0, 8, 0, 7, 0],
+			[0, 0, 4, 7, 9, 0, 0, 0, 0],
+
+			[0, 8, 5, 0, 3, 0, 0, 0, 0],
+			[1, 0, 0, 0, 0, 2, 0, 8, 9],
+			[6, 0, 0, 0, 0, 0, 0, 0, 0],
+		]
+	}
+}
+
+pub fn example10() -> Sudoku {
+	Sudoku {
+		slots: [
+			[0, 2, 0, 0, 0, 0, 0, 0, 0],
+			[0, 0, 0, 0, 0, 4, 5, 0, 0],
+			[0, 6, 0, 0, 0, 0, 0, 0, 0],
+
+			[0, 0, 4, 0, 0, 0, 0, 0, 0],
+			[9, 0, 3, 0, 1, 0, 0, 7, 0],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0],
+
+			[0, 0, 0, 0, 0, 0, 0, 0, 0],
+			[0, 8, 0, 0, 0, 0, 3, 0, 0],
+			[0, 0, 0, 1, 0, 0, 0, 9, 0],
 		]
 	}
 }
