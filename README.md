@@ -5,6 +5,10 @@ Library for back tracking with customizable search for moves
 
 With other words, it solves puzzles like [Sudoku](https://en.wikipedia.org/wiki/Sudoku) or [Knapsack](https://en.wikipedia.org/wiki/Knapsack_problem)!
 
+Blog posts:
+
+- [2017-08-09 Quickbacktrack 0.3 Released](https://github.com/advancedresearch/advancedresearch.github.io/blob/master/blog/2017-08-09-quickbacktrack-0.3-released.md)
+
 ### Features
 
 - Customizable search for moves
