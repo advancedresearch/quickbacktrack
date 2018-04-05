@@ -27,10 +27,12 @@ impl Puzzle for MagicSquare {
     type Pos = [usize; 2];
     type Val = u16;
 
-    fn solve_simple(&mut self) {}
-
     fn set(&mut self, pos: [usize; 2], val: u16) {
         self.slots[pos[1]][pos[0]] = val;
+    }
+
+    fn get(&mut self, pos: [usize; 2]) -> u16 {
+        self.slots[pos[1]][pos[0]]
     }
 
     fn remove(&mut self, other: &MagicSquare) {

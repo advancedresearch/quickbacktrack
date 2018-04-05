@@ -17,10 +17,12 @@ impl Puzzle for EightQueens {
     type Pos = usize;
     type Val = u8;
 
-    fn solve_simple(&mut self) {}
-
     fn set(&mut self, pos: usize, val: u8) {
         self.queens[pos] = val;
+    }
+
+    fn get(&mut self, pos: usize) -> u8 {
+        self.queens[pos]
     }
 
     fn print(&self) {

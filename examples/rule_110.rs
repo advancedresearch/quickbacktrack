@@ -155,7 +155,7 @@ impl Puzzle for Rule110 {
     type Pos = [usize; 2];
     type Val = u8;
 
-    fn solve_simple(&mut self) {
+    fn solve_simple<F: FnMut(&mut Self, Self::Pos, Self::Val)>(&mut self, mut f: F) {
         loop {
 			let mut found_any = false;
 			for i in 0..self.cells.len() {
@@ -163,7 +163,7 @@ impl Puzzle for Rule110 {
 					if self.cells[i][j] != 0 { continue; }
 					let possible = self.possible([i, j]);
 					if possible.len() == 1 {
-						self.cells[i][j] = possible[0];
+						f(self, [i, j], possible[0]);
 						found_any = true;
 					}
 				}
@@ -175,6 +175,10 @@ impl Puzzle for Rule110 {
     fn set(&mut self, pos: [usize; 2], val: u8) {
         self.cells[pos[0]][pos[1]] = val;
     }
+
+	fn get(&mut self, pos: [usize; 2]) -> u8 {
+		self.cells[pos[0]][pos[1]]
+	}
 
     fn is_solved(&self) -> bool {
         // All cells must be non-empty.
