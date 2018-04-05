@@ -29,14 +29,16 @@ impl Puzzle for Bag {
     type Pos = usize;
     type Val = bool;
 
-    fn solve_simple(&mut self) {}
-
     fn set(&mut self, ind: usize, val: bool) {
         if val {
             self.items |= 1 << ind;
         } else {
             self.items &= !(1 << ind);
         }
+    }
+
+    fn get(&mut self, ind: usize) -> bool {
+        self.items & (1 << ind) == (1 << ind)
     }
 
     fn print(&self) {

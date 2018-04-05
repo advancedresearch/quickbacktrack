@@ -66,9 +66,13 @@ pub trait Puzzle: Clone {
     /// Solve simple stuff faster.
     /// This will reduce the number of steps in solution.
     /// If you do not know how to solve this, leave it empty.
-    fn solve_simple(&mut self);
+    ///
+    /// Call the closure when making a simple choice.
+    fn solve_simple<F: FnMut(&mut Self, Self::Pos, Self::Val)>(&mut self, _f: F) {}
     /// Sets a value at position.
     fn set(&mut self, pos: Self::Pos, val: Self::Val);
+    /// Gets value at position.
+    fn get(&mut self, pos: Self::Pos) -> Self::Val;
     /// Print puzzle out to standard output.
     fn print(&self);
     /// Whether puzzle is solved.
@@ -197,8 +201,13 @@ pub struct Solution<T> {
 pub struct BackTrackSolver<T>
     where T: Puzzle
 {
-    /// Stores the states.
-    pub states: Vec<T>,
+    /// Stores the original state.
+    pub original: T,
+    /// Stores the state.
+    pub state: T,
+    /// Stores the previous values of a position before making a choice.
+    /// If the flag is true, the value was inserted due to a simple choice.
+    pub prevs: Vec<(T::Pos, T::Val, bool)>,
     /// Stores the choices for the states.
     pub choice: Vec<(T::Pos, Vec<T::Val>)>,
     /// Search for simple solutions.
@@ -211,7 +220,9 @@ impl<T> BackTrackSolver<T>
     /// Creates a new solver.
     pub fn new(puzzle: T, settings: SolveSettings) -> BackTrackSolver<T> {
         BackTrackSolver {
-            states: vec![puzzle],
+            original: puzzle.clone(),
+            state: puzzle,
+            prevs: vec![],
             choice: vec![],
             settings: settings,
         }
@@ -236,13 +247,15 @@ impl<T> BackTrackSolver<T>
                     sleep(Duration::from_millis(ms));
                 }
             }
-            let n = self.states.len() - 1;
-            let mut new = self.states[n].clone();
             if self.settings.solve_simple {
-                new.solve_simple();
+                let ref mut prevs = self.prevs;
+                self.state.solve_simple(|state, pos, val| {
+                    prevs.push((pos, state.get(pos), true));
+                    state.set(pos, val);
+                });
             }
             if self.settings.debug {
-                new.print();
+                self.state.print();
             }
             iterations += 1;
             if let Some(max_iterations) = self.settings.max_iterations {
@@ -250,20 +263,20 @@ impl<T> BackTrackSolver<T>
                     return None;
                 }
             }
-            if new.is_solved() {
+            if self.state.is_solved() {
                 if self.settings.debug {
                     println!("Solved! Iterations: {}", iterations);
                 }
                 if self.settings.difference {
-                    new.remove(&self.states[0]);
+                    self.state.remove(&self.original);
                 }
-                return Some(Solution { puzzle: new, iterations: iterations, strategy: None });
+                return Some(Solution { puzzle: self.state, iterations: iterations, strategy: None });
             }
 
-            let empty = f(&new);
+            let empty = f(&self.state);
             let mut possible = match empty {
                 None => vec![],
-                Some(x) => g(&new, x)
+                Some(x) => g(&self.state, x)
             };
             if possible.len() == 0 {
                 // println!("No possible at {:?}", empty);
@@ -278,16 +291,26 @@ impl<T> BackTrackSolver<T>
                     let (pos, mut possible) = self.choice.pop().unwrap();
                     if let Some(new_val) = possible.pop() {
                         // Try next choice.
-                        let n = self.states.len() - 1;
-                        self.states[n].set(pos, new_val);
+                        while let Some((old_pos, old_val, simple)) = self.prevs.pop() {
+                            self.state.set(old_pos, old_val);
+                            if !simple {break}
+                        }
+                        self.prevs.push((pos, self.state.get(pos), false));
+                        self.state.set(pos, new_val);
                         self.choice.push((pos, possible));
                         if self.settings.debug {
                             println!("Try   {:?}, {:?} depth {} {} (failed at {:?})",
-                                pos, new_val, self.choice.len(), self.states.len(), empty);
+                                pos, new_val, self.choice.len(), self.prevs.len(), empty);
                         }
                         break;
                     } else {
-                        if self.states.pop().is_none() {
+                        let mut undo = false;
+                        while let Some((old_pos, old_val, simple)) = self.prevs.pop() {
+                            self.state.set(old_pos, old_val);
+                            undo = true;
+                            if !simple {break}
+                        }
+                        if !undo {
                             // No more possible choices.
                             return None;
                         }
@@ -297,12 +320,12 @@ impl<T> BackTrackSolver<T>
                 let empty = empty.unwrap();
                 // Put in the first guess.
                 let v = possible.pop().unwrap();
-                new.set(empty, v);
+                self.prevs.push((empty, self.state.get(empty), false));
+                self.state.set(empty, v);
                 self.choice.push((empty, possible));
-                self.states.push(new);
                 if self.settings.debug {
                     println!("Guess {:?}, {:?} depth {} {}",
-                        empty, v, self.choice.len(), self.states.len());
+                        empty, v, self.choice.len(), self.prevs.len());
                 }
             }
         }
@@ -376,7 +399,7 @@ impl<T> MultiBackTrackSolver<T>
                 let n = states.len() - 1;
                 let mut new = states[n].clone();
                 if self.settings.solve_simple {
-                    new.solve_simple();
+                    new.solve_simple(|state, pos, val| state.set(pos, val));
                 }
                 if self.settings.debug {
                     println!("Strategy {}", i);

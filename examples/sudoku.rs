@@ -22,7 +22,7 @@ impl Puzzle for Sudoku {
 	type Pos = [usize; 2];
 	type Val = u8;
 
-	fn solve_simple(&mut self) {
+	fn solve_simple<F: FnMut(&mut Self, Self::Pos, Self::Val)>(&mut self, mut f: F) {
 		loop {
 			let mut found_any = false;
 			for y in 0..9 {
@@ -30,7 +30,7 @@ impl Puzzle for Sudoku {
 					if self.slots[y][x] != 0 { continue; }
 					let possible = self.possible([x, y]);
 					if possible.len() == 1 {
-						self.slots[y][x] = possible[0];
+						f(self, [x, y], possible[0]);
 						found_any = true;
 					}
 				}
@@ -41,6 +41,10 @@ impl Puzzle for Sudoku {
 
 	fn set(&mut self, pos: [usize; 2], val: u8) {
 		self.slots[pos[1]][pos[0]] = val;
+	}
+
+	fn get(&mut self, pos: [usize; 2]) -> u8 {
+		self.slots[pos[1]][pos[0]]
 	}
 
 	fn remove(&mut self, other: &Sudoku) {

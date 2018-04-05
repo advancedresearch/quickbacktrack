@@ -261,10 +261,12 @@ impl Puzzle for Tsp {
     type Pos = usize;
     type Val = Option<(usize, usize)>;
 
-    fn solve_simple(&mut self) {}
-
     fn set(&mut self, pos: usize, val: Option<(usize, usize)>) {
         self.slots[pos] = val;
+    }
+
+    fn get(&mut self, pos: usize) -> Option<(usize, usize)> {
+        self.slots[pos]
     }
 
     fn print(&self) {
