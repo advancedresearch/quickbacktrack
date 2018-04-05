@@ -72,7 +72,7 @@ pub trait Puzzle: Clone {
     /// Sets a value at position.
     fn set(&mut self, pos: Self::Pos, val: Self::Val);
     /// Gets value at position.
-    fn get(&mut self, pos: Self::Pos) -> Self::Val;
+    fn get(&self, pos: Self::Pos) -> Self::Val;
     /// Print puzzle out to standard output.
     fn print(&self);
     /// Whether puzzle is solved.

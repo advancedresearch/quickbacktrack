@@ -31,7 +31,7 @@ impl Puzzle for MagicSquare {
         self.slots[pos[1]][pos[0]] = val;
     }
 
-    fn get(&mut self, pos: [usize; 2]) -> u16 {
+    fn get(&self, pos: [usize; 2]) -> u16 {
         self.slots[pos[1]][pos[0]]
     }
 

@@ -265,7 +265,7 @@ impl Puzzle for Tsp {
         self.slots[pos] = val;
     }
 
-    fn get(&mut self, pos: usize) -> Option<(usize, usize)> {
+    fn get(&self, pos: usize) -> Option<(usize, usize)> {
         self.slots[pos]
     }
 

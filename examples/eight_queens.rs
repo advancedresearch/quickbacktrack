@@ -21,7 +21,7 @@ impl Puzzle for EightQueens {
         self.queens[pos] = val;
     }
 
-    fn get(&mut self, pos: usize) -> u8 {
+    fn get(&self, pos: usize) -> u8 {
         self.queens[pos]
     }
 

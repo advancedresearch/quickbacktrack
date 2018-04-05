@@ -176,7 +176,7 @@ impl Puzzle for Rule110 {
         self.cells[pos[0]][pos[1]] = val;
     }
 
-	fn get(&mut self, pos: [usize; 2]) -> u8 {
+	fn get(&self, pos: [usize; 2]) -> u8 {
 		self.cells[pos[0]][pos[1]]
 	}
 

@@ -43,7 +43,7 @@ impl Puzzle for Sudoku {
 		self.slots[pos[1]][pos[0]] = val;
 	}
 
-	fn get(&mut self, pos: [usize; 2]) -> u8 {
+	fn get(&self, pos: [usize; 2]) -> u8 {
 		self.slots[pos[1]][pos[0]]
 	}
 

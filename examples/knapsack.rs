@@ -37,7 +37,7 @@ impl Puzzle for Bag {
         }
     }
 
-    fn get(&mut self, ind: usize) -> bool {
+    fn get(&self, ind: usize) -> bool {
         self.items & (1 << ind) == (1 << ind)
     }
 
