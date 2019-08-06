@@ -16,7 +16,7 @@ Blog posts:
 - Solve simple steps to reduce debug output
 - Trait `Puzzle` for solving generic constraint satisfaction problems
 - Can start with non-empty puzzle
-- Get get difference from initial puzzle state
+- Can get difference from initial puzzle state
 
 ### Sudoku
 
