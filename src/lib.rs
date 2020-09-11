@@ -265,7 +265,7 @@ impl<T> BackTrackSolver<T>
             }
             if self.state.is_solved() {
                 if self.settings.debug {
-                    println!("Solved! Iterations: {}", iterations);
+                    eprintln!("Solved! Iterations: {}", iterations);
                 }
                 if self.settings.difference {
                     self.state.remove(&self.original);
@@ -279,12 +279,11 @@ impl<T> BackTrackSolver<T>
                 Some(x) => g(&self.state, x)
             };
             if possible.len() == 0 {
-                // println!("No possible at {:?}", empty);
                 loop {
                     if self.choice.len() == 0 {
                         if self.settings.debug {
                             // No more possible choices.
-                            println!("No more possible choices");
+                            eprintln!("No more possible choices");
                         }
                         return None;
                     }
@@ -299,7 +298,7 @@ impl<T> BackTrackSolver<T>
                         self.state.set(pos, new_val);
                         self.choice.push((pos, possible));
                         if self.settings.debug {
-                            println!("Try   {:?}, {:?} depth {} {} (failed at {:?})",
+                            eprintln!("Try   {:?}, {:?} depth ch: {}, prev: {} (failed at {:?})",
                                 pos, new_val, self.choice.len(), self.prevs.len(), empty);
                         }
                         break;
@@ -324,7 +323,7 @@ impl<T> BackTrackSolver<T>
                 self.state.set(empty, v);
                 self.choice.push((empty, possible));
                 if self.settings.debug {
-                    println!("Guess {:?}, {:?} depth {} {}",
+                    eprintln!("Guess {:?}, {:?} depth {} {}",
                         empty, v, self.choice.len(), self.prevs.len());
                 }
             }

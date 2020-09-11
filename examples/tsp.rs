@@ -129,8 +129,6 @@ impl Tsp {
         }
 
         if res.len() > 2 {
-            use std::cmp::PartialOrd;
-
             // Try the pair by order of local distance.
             local_distances.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
             res = local_distances.iter().rev().map(|p| res[p.0]).collect();
