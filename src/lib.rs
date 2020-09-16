@@ -90,11 +90,18 @@ pub trait Puzzle: Clone {
 /// - difference: `false`
 /// - sleep_ms: `None`
 pub struct SolveSettings {
-    solve_simple: bool,
-    debug: bool,
-    difference: bool,
-    sleep_ms: Option<u64>,
-    max_iterations: Option<u64>,
+    /// Whether to solve simple steps.
+    pub solve_simple: bool,
+    /// Whether to output debug prints.
+    pub debug: bool,
+    /// Show difference from original puzzle.
+    pub difference: bool,
+    /// The number of milliseconds to sleep before each debug print.
+    pub sleep_ms: Option<u64>,
+    /// The number of maximum iterations.
+    pub max_iterations: Option<u64>,
+    /// Whether to print every million iteration.
+    pub print_millions: bool,
 }
 
 impl SolveSettings {
@@ -106,6 +113,7 @@ impl SolveSettings {
             difference: false,
             sleep_ms: None,
             max_iterations: None,
+            print_millions: false,
         }
     }
 
@@ -185,6 +193,17 @@ impl SolveSettings {
         self.set_max_iterations(val);
         self
     }
+
+    /// Sets printing of every million iteration to standard error output.
+    pub fn set_print_millions(&mut self, val: bool) {
+        self.print_millions = val;
+    }
+
+    /// Prints every million iteration to standard error output.
+    pub fn print_millions(mut self, val: bool) -> Self {
+        self.set_print_millions(val);
+        self
+    }
 }
 
 /// Contains solution.
@@ -197,7 +216,7 @@ pub struct Solution<T> {
     pub strategy: Option<usize>,
 }
 
-/// Solvees puzzles using back tracking.
+/// Solves puzzles using back tracking.
 pub struct BackTrackSolver<T>
     where T: Puzzle
 {
@@ -210,7 +229,7 @@ pub struct BackTrackSolver<T>
     pub prevs: Vec<(T::Pos, T::Val, bool)>,
     /// Stores the choices for the states.
     pub choice: Vec<(T::Pos, Vec<T::Val>)>,
-    /// Search for simple solutions.
+    /// Stores solve settings.
     pub settings: SolveSettings,
 }
 
@@ -298,8 +317,10 @@ impl<T> BackTrackSolver<T>
                         self.state.set(pos, new_val);
                         self.choice.push((pos, possible));
                         if self.settings.debug {
-                            eprintln!("Try   {:?}, {:?} depth ch: {}, prev: {} (failed at {:?})",
-                                pos, new_val, self.choice.len(), self.prevs.len(), empty);
+                            eprintln!("Try   {:?}, {:?} depth ch: {} prev: {} (failed at {:?}) it: {}",
+                                pos, new_val, self.choice.len(), self.prevs.len(), empty, iterations);
+                        } else if self.settings.print_millions && (iterations % 1_000_000 == 0) {
+                            eprintln!("Iteration: {}mill", iterations / 1_000_000);
                         }
                         break;
                     } else {
@@ -323,8 +344,10 @@ impl<T> BackTrackSolver<T>
                 self.state.set(empty, v);
                 self.choice.push((empty, possible));
                 if self.settings.debug {
-                    eprintln!("Guess {:?}, {:?} depth {} {}",
-                        empty, v, self.choice.len(), self.prevs.len());
+                    eprintln!("Guess {:?}, {:?} depth ch: {} prev: {} it: {}",
+                        empty, v, self.choice.len(), self.prevs.len(), iterations);
+                } else if self.settings.print_millions && (iterations % 1_000_000 == 0) {
+                    eprintln!("Iteration: {}mill", iterations / 1_000_000);
                 }
             }
         }
@@ -343,7 +366,7 @@ pub struct MultiBackTrackSolver<T>
     pub prevs: Vec<Vec<(T::Pos, T::Val, bool)>>,
     /// Stores the choices for the states.
     pub choice: Vec<Vec<(T::Pos, Vec<T::Val>)>>,
-    /// Search for simple solutions.
+    /// Stores solve settings.
     pub settings: SolveSettings,
 }
 
@@ -448,8 +471,10 @@ impl<T> MultiBackTrackSolver<T>
                             state.set(pos, new_val);
                             choice.push((pos, possible));
                             if self.settings.debug {
-                                println!("Try   {:?}, {:?} depth {} {} (failed at {:?})",
-                                    pos, new_val, choice.len(), prevs.len(), empty);
+                                eprintln!("Try   {:?}, {:?} depth ch: {} prev: {} (failed at {:?}) it: {}",
+                                    pos, new_val, self.choice.len(), self.prevs.len(), empty, iterations);
+                            } else if self.settings.print_millions && (iterations % 1_000_000 == 0) {
+                                eprintln!("Iteration: {}mill", iterations / 1_000_000);
                             }
                             break;
                         } else {
@@ -473,8 +498,10 @@ impl<T> MultiBackTrackSolver<T>
                     state.set(empty, v);
                     choice.push((empty, possible));
                     if self.settings.debug {
-                        println!("Guess {:?}, {:?} depth {} {}",
-                            empty, v, choice.len(), prevs.len());
+                        eprintln!("Guess {:?}, {:?} depth ch: {} prev: {} it: {}",
+                            empty, v, self.choice.len(), self.prevs.len(), iterations);
+                    } else if self.settings.print_millions && (iterations % 1_000_000 == 0) {
+                        eprintln!("Iteration: {}mill", iterations / 1_000_000);
                     }
                 }
             }
@@ -509,4 +536,323 @@ pub fn combine<T>(lists: Vec<Vec<T>>) -> Vec<T>
 		res.push(keys[ind].clone());
 	}
 	res
+}
+
+/// Stores settings for entropy solver.
+pub struct EntropySolveSettings {
+    /// The number of solve attempts.
+    pub attempts: u64,
+    /// Whether to sample randomly (1) or converge (0).
+    pub noise: f64,
+    /// Make one final attempt with maximum iterations setting.
+    pub final_attempt: Option<Option<u64>>,
+}
+
+impl EntropySolveSettings {
+    /// Creates new entropy settings.
+    pub fn new() -> EntropySolveSettings {
+        EntropySolveSettings {
+            attempts: 1,
+            noise: 0.0,
+            final_attempt: None,
+        }
+    }
+
+    /// Sets number of attempts.
+    pub fn set_attempts(&mut self, val: u64) {
+        self.attempts = val;
+    }
+
+    /// The number of attempts.
+    pub fn attempts(mut self, val: u64) -> Self {
+        self.set_attempts(val);
+        self
+    }
+
+    /// Sets the noise (0 = converge, 1 = random sampling).
+    pub fn set_noise(&mut self, val: f64) {
+        self.noise = val;
+    }
+
+    /// The noise (0 = converge, 1 = random sampling).
+    pub fn noise(mut self, val: f64) -> Self {
+        self.set_noise(val);
+        self
+    }
+
+    /// Sets one final attempt with maximum iterations setting.
+    pub fn set_final_attempt(&mut self, val: Option<Option<u64>>) {
+        self.final_attempt = val;
+    }
+
+    /// The final attempt with maximum iterations setting.
+    pub fn final_attempt(mut self, val: Option<Option<u64>>) -> Self {
+        self.set_final_attempt(val);
+        self
+    }
+}
+
+/// Solves puzzles using minimum entropy search.
+///
+/// This solver learns from repeatedly attempting to solve the puzzle.
+/// The algorithm is inspired by [WaveFunctionCollapse](https://github.com/mxgmn/WaveFunctionCollapse).
+///
+/// This solver is general and guaranteed to find a solution, if any.
+/// It also uses custom priority of choices in the initial attempts.
+///
+/// The search works by attempting normal backtrack solving,
+/// but increasing weights to choices each time they are made.
+/// When the algorithm is stuck, it minimizes entropy of common choices.
+/// At later attempts, the algorithm will try these common choices first.
+///
+/// When `EntropySettings::noise` is non-zero, the choices will occationally be shuffled.
+/// For more information, see `EntropySolveSettings`.
+pub struct EntropyBackTrackSolver<T> where T: Puzzle {
+    /// Stores the original state.
+    pub original: T,
+    /// Stores the state.
+    pub state: T,
+    /// Stores the previous values of a position before making a choice.
+    /// If the flag is true, the value was inserted due to a simple choice.
+    pub prevs: Vec<(T::Pos, T::Val, bool)>,
+    /// Stores the choices for the states.
+    pub choice: Vec<(T::Pos, Vec<T::Val>)>,
+    /// The initial choices.
+    pub start_choice: Vec<(T::Pos, Vec<T::Val>)>,
+    /// Stores weights of choices.
+    pub weights: Vec<Vec<f64>>,
+    /// Stores solve settings.
+    pub settings: SolveSettings,
+    /// Stores entropy solve settings.
+    pub entropy_settings: EntropySolveSettings,
+}
+
+impl<T> EntropyBackTrackSolver<T> where T: Puzzle {
+    /// Creates a new collapse solver.
+    pub fn new(
+        puzzle: T,
+        start_choice: Vec<(T::Pos, Vec<T::Val>)>,
+        entropy_settings: EntropySolveSettings,
+        settings: SolveSettings
+    ) -> Self {
+        let weights = start_choice.iter().map(|n| vec![1.0; n.1.len()]).collect();
+        EntropyBackTrackSolver {
+            original: puzzle.clone(),
+            prevs: vec![],
+            state: puzzle,
+            choice: vec![],
+            start_choice,
+            weights,
+            entropy_settings,
+            settings,
+        }
+    }
+
+    /// Calculates the entropy of a choice.
+    pub fn entropy(&self, i: usize) -> f64 {
+        let sum: f64 = self.weights[i].iter().sum();
+        self.weights[i].iter().map(|&w| {
+                let p: f64 = w / sum;
+                -(p * p.ln())
+            }).sum()
+    }
+
+    /// Finds the position with least entropy.
+    pub fn min_entropy<G>(&self, g: &mut G) -> Option<(usize, T::Pos)>
+        where G: FnMut(&T, T::Pos) -> Vec<T::Val>
+    {
+        let mut min: Option<(usize, f64)> = None;
+        for i in 0..self.weights.len() {
+            if self.weights.len() == 0 {continue};
+            if g(&self.state, self.start_choice[i].0).len() == 0 {continue};
+            let e = self.entropy(i);
+            if min.is_none() || min.unwrap().1 > e {
+                min = Some((i, e));
+            }
+        }
+        min.map(|(i, _)| (i, self.start_choice[i].0))
+    }
+
+    /// Increase weight of observed state.
+    pub fn observe(&mut self, pos: T::Pos, new_val: T::Val)
+        where T::Pos: PartialEq,
+    {
+        for (i, ch) in self.start_choice.iter().enumerate() {
+            if ch.0 == pos {
+                for (j, val) in self.start_choice[i].1.iter().enumerate() {
+                    if *val == new_val {
+                        self.weights[i][j] += 1.0;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Attempts to solve puzzle repeatedly, using `SolveSettings::max_iterations`.
+    ///
+    /// The solver learns by reusing weights from previous attempts.
+    pub fn solve<G>(&mut self, g: G) -> (u64, Option<Solution<T>>)
+        where G: Copy + FnMut(&T, T::Pos) -> Vec<T::Val>,
+              T::Pos: PartialEq
+    {
+        let mut solution = None;
+        let mut i = 0;
+        if self.settings.max_iterations.is_some() {
+            loop {
+                if i >= self.entropy_settings.attempts {break};
+
+                if solution.is_none() {
+                    solution = self.solve_single_attempt(g);
+                } else {
+                    break;
+                }
+
+                i += 1;
+            }
+        }
+        if solution.is_none() {
+            if let Some(new_max_iter) = self.entropy_settings.final_attempt {
+                let max_iter = self.settings.max_iterations;
+                let noise = self.entropy_settings.noise;
+                self.entropy_settings.noise = 0.0;
+                self.settings.max_iterations = new_max_iter;
+                solution = self.solve_single_attempt(g);
+                // Reset old settings.
+                self.settings.max_iterations = max_iter;
+                self.entropy_settings.noise = noise;
+            }
+        }
+        (i, solution)
+    }
+
+    /// Solves puzzle, using a closure for picking options in preferred order.
+    ///
+    /// This can be called repeated times, limited by `SolveSettings::max_iterations`
+    /// to reuse weights from previous attempts.
+    pub fn solve_single_attempt<G>(&mut self, mut g: G) -> Option<Solution<T>>
+        where G: FnMut(&T, T::Pos) -> Vec<T::Val>,
+              T::Pos: PartialEq
+    {
+        use std::thread::sleep;
+        use std::time::Duration;
+
+        let mut rng = rand::thread_rng();
+        let mut iterations: u64 = 0;
+        loop {
+            if self.settings.debug {
+                if let Some(ms) = self.settings.sleep_ms {
+                    sleep(Duration::from_millis(ms));
+                }
+            }
+            if self.settings.solve_simple {
+                let ref mut prevs = self.prevs;
+                self.state.solve_simple(|state, pos, val| {
+                    prevs.push((pos, state.get(pos), true));
+                    state.set(pos, val);
+                });
+            }
+            if self.settings.debug {
+                self.state.print();
+            }
+            iterations += 1;
+            if let Some(max_iterations) = self.settings.max_iterations {
+                if iterations > max_iterations {
+                    return None;
+                }
+            }
+            if self.state.is_solved() {
+                if self.settings.debug {
+                    eprintln!("Solved! Iterations: {}", iterations);
+                }
+                if self.settings.difference {
+                    self.state.remove(&self.original);
+                }
+                return Some(Solution { puzzle: self.state.clone(), iterations: iterations, strategy: None });
+            }
+
+            let empty = self.min_entropy(&mut g);
+            let mut possible = match empty {
+                None => vec![],
+                Some((ind, x)) => {
+                    use rand::Rng;
+
+                    let mut possible = g(&self.state, x);
+                    if rng.gen::<f64>() < self.entropy_settings.noise {
+                        use rand::seq::SliceRandom;
+                        possible.shuffle(&mut rng);
+                        possible
+                    } else {
+                        let mut keys = vec![];
+                        for (j, p) in possible.iter().enumerate() {
+                            for i in 0..self.start_choice[ind].1.len() {
+                                if self.start_choice[ind].1[i] == *p {
+                                    keys.push((j, self.weights[ind][i]));
+                                    break;
+                                }
+                            }
+                        }
+                        keys.sort_by(|&(_, a), &(_, b)| a.partial_cmp(&b).unwrap());
+                        let new_possible = keys.iter().map(|&(i, _)| possible[i]).collect::<Vec<T::Val>>();
+                        new_possible
+                    }
+                }
+            };
+            if possible.len() == 0 {
+                loop {
+                    if self.choice.len() == 0 {
+                        if self.settings.debug {
+                            // No more possible choices.
+                            eprintln!("No more possible choices");
+                        }
+                        return None;
+                    }
+                    let (pos, mut possible) = self.choice.pop().unwrap();
+                    if let Some(new_val) = possible.pop() {
+                        // Try next choice.
+                        while let Some((old_pos, old_val, simple)) = self.prevs.pop() {
+                            self.state.set(old_pos, old_val);
+                            if !simple {break}
+                        }
+                        self.prevs.push((pos, self.state.get(pos), false));
+                        self.state.set(pos, new_val);
+                        self.observe(pos, new_val);
+                        self.choice.push((pos, possible));
+                        if self.settings.debug {
+                            eprintln!("Try   {:?}, {:?} depth ch: {} prev: {} (failed at {:?}) it: {}",
+                                pos, new_val, self.choice.len(), self.prevs.len(), empty, iterations);
+                        } else if self.settings.print_millions && (iterations % 1_000_000 == 0) {
+                            eprintln!("Iteration: {}mill", iterations / 1_000_000);
+                        }
+                        break;
+                    } else {
+                        let mut undo = false;
+                        while let Some((old_pos, old_val, simple)) = self.prevs.pop() {
+                            self.state.set(old_pos, old_val);
+                            undo = true;
+                            if !simple {break}
+                        }
+                        if !undo {
+                            // No more possible choices.
+                            return None;
+                        }
+                    }
+                }
+            } else {
+                let empty = empty.unwrap().1;
+                // Put in the first guess.
+                let v = possible.pop().unwrap();
+                self.prevs.push((empty, self.state.get(empty), false));
+                self.state.set(empty, v);
+                self.observe(empty, v);
+                self.choice.push((empty, possible));
+                if self.settings.debug {
+                    eprintln!("Guess {:?}, {:?} depth ch: {} prev: {} it: {}",
+                        empty, v, self.choice.len(), self.prevs.len(), iterations);
+                } else if self.settings.print_millions && (iterations % 1_000_000 == 0) {
+                    eprintln!("Iteration: {}mill", iterations / 1_000_000);
+                }
+            }
+        }
+    }
 }

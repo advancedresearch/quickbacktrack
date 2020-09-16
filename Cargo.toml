@@ -1,12 +1,14 @@
 [package]
 name = "quickbacktrack"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 description = "Library for back tracking with customizable search for moves"
 keywords = ["back", "track", "puzzle", "procedural", "generation"]
 license = "MIT"
 repository = "https://github.com/bvssvni/quickbacktrack.git"
 homepage = "https://github.com/bvssvni/quickbacktrack"
+edition = "2018"
 
 [dependencies]
 fnv = "1.0.5"
+rand = "0.7.3"
