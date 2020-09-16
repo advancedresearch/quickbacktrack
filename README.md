@@ -7,6 +7,7 @@ With other words, it solves puzzles like [Sudoku](https://en.wikipedia.org/wiki/
 
 Blog posts:
 
+- [2020-10-16 Quickbacktrack 0.7 Released](https://github.com/advancedresearch/advancedresearch.github.io/blob/master/blog/2020-10-16-quickbacktrack-0.7-released.md)
 - [2017-08-09 Quickbacktrack 0.3 Released](https://github.com/advancedresearch/advancedresearch.github.io/blob/master/blog/2017-08-09-quickbacktrack-0.3-released.md)
 
 ### Features
