@@ -23,19 +23,19 @@ Blog posts:
 
 ```
  ___ ___ ___
-|436| 8 |751|
-|17 | 34|8 9|
-|859|761|324|
+|43 | 8 |7  |
+|17 | 34|8  |
+|85 | 6 |3  |
  ---+---+---
 |964|153|287|
 |285|497|136|
 |713|826|945|
  ---+---+---
 |521|349|678|
-|347|618|592|
+|347|61 |5  |
 |698| 7 |413|
  ---+---+---
-Guess [5, 0], 2 depth 50 51
+Guess [8, 1], 9 depth ch: 6 prev: 38 it: 7
 ```
 
 To run, open up Terminal and type:
@@ -73,7 +73,7 @@ cargo run --example knapsack
 |_|_|_|_|_|_|_|_|
 |_|_|_|_|_|_|_|_|
 
-Guess 4, 6 depth 5 6
+Guess 6, 7 depth ch: 5 prev: 5 it: 72
 ```
 
 To run, open up Terminal and type:
