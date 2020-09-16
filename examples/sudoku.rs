@@ -11,7 +11,7 @@ for picking the next empty slot.
 
 extern crate quickbacktrack;
 
-use quickbacktrack::{combine, MultiBackTrackSolver, Puzzle, SolveSettings};
+use quickbacktrack::{combine, BackTrackSolver, MultiBackTrackSolver, Puzzle, SolveSettings};
 
 #[derive(Clone)]
 pub struct Sudoku {
@@ -109,6 +109,7 @@ impl Sudoku {
 			for x in 0..9 {
 				if self.slots[y][x] == 0 {
 					let possible = self.possible([x, y]);
+					if possible.len() == 0 {return None};
 					if min.is_none() || min.unwrap() > possible.len() {
 						min = Some(possible.len());
 						min_pos = Some([x, y]);
@@ -165,7 +166,6 @@ impl Sudoku {
 				min_freq = Some(i);
 			}
 		}
-		// println!("TEST {:?} {:?}", freq, min_freq);
 		let min_freq = if let Some(i) = min_freq {
 			i
 		} else {
@@ -186,7 +186,6 @@ impl Sudoku {
 	pub fn possible(&self, pos: [usize; 2]) -> Vec<u8> {
 		let mut res = vec![];
 		if self.slots[pos[1]][pos[0]] != 0 {
-			res.push(self.slots[pos[1]][pos[0]]);
 			return res;
 		}
 		'next_val: for v in 1..10 {
@@ -338,46 +337,54 @@ fn main() {
 
 	let settings = SolveSettings::new()
 		.solve_simple(true)
-		.debug(false)
+		.debug(true)
 		.difference(true)
 		.sleep_ms(500)
 	;
-	let solver = MultiBackTrackSolver::new(settings);
-	let strategies: Vec<(fn(&_) -> _, fn(&_, _) -> _)> = vec![
-		(Sudoku::find_min_empty, Sudoku::possible),
-		(Sudoku::find_min_empty, Sudoku::possible_max_future),
-		(Sudoku::find_min_empty, Sudoku::possible_maxmin_future),
-		(Sudoku::find_min_empty, Sudoku::possible_max_future2),
-		(Sudoku::find_min_potential, Sudoku::possible),
-		(Sudoku::find_min_potential, Sudoku::possible_max_future),
-		(Sudoku::find_min_potential, Sudoku::possible_maxmin_future),
-		(Sudoku::find_min_potential, Sudoku::possible_max_future2),
-		(Sudoku::find_empty, Sudoku::possible),
-		(Sudoku::find_empty, Sudoku::possible_max_future),
-		(Sudoku::find_empty, Sudoku::possible_maxmin_future),
-		(Sudoku::find_empty, Sudoku::possible_max_future2),
-		(Sudoku::find_min_empty, |s: &Sudoku, p: [usize; 2]| combine(vec![
-				s.possible(p),
-				s.possible_max_future(p),
-				s.possible_maxmin_future(p),
-				s.possible_max_future2(p),
-			])),
-		(Sudoku::find_min_potential, |s: &Sudoku, p: [usize; 2]| combine(vec![
-				s.possible(p),
-				s.possible_max_future(p),
-				s.possible_maxmin_future(p),
-				s.possible_max_future2(p),
-			])),
-		(Sudoku::find_empty, |s: &Sudoku, p: [usize; 2]| combine(vec![
-				s.possible(p),
-				s.possible_max_future(p),
-				s.possible_maxmin_future(p),
-				s.possible_max_future2(p),
-			])),
-	];
 
-	let solution = solver.solve(x, &strategies)
-		.expect("Expected solution");
+	let use_multi = false;
+
+	let solution = if use_multi {
+		let solver = MultiBackTrackSolver::new(settings);
+		let strategies: Vec<(fn(&_) -> _, fn(&_, _) -> _)> = vec![
+			(Sudoku::find_min_empty, Sudoku::possible),
+			(Sudoku::find_min_empty, Sudoku::possible_max_future),
+			(Sudoku::find_min_empty, Sudoku::possible_maxmin_future),
+			(Sudoku::find_min_empty, Sudoku::possible_max_future2),
+			(Sudoku::find_min_potential, Sudoku::possible),
+			(Sudoku::find_min_potential, Sudoku::possible_max_future),
+			(Sudoku::find_min_potential, Sudoku::possible_maxmin_future),
+			(Sudoku::find_min_potential, Sudoku::possible_max_future2),
+			(Sudoku::find_empty, Sudoku::possible),
+			(Sudoku::find_empty, Sudoku::possible_max_future),
+			(Sudoku::find_empty, Sudoku::possible_maxmin_future),
+			(Sudoku::find_empty, Sudoku::possible_max_future2),
+			(Sudoku::find_min_empty, |s: &Sudoku, p: [usize; 2]| combine(vec![
+					s.possible(p),
+					s.possible_max_future(p),
+					s.possible_maxmin_future(p),
+					s.possible_max_future2(p),
+				])),
+			(Sudoku::find_min_potential, |s: &Sudoku, p: [usize; 2]| combine(vec![
+					s.possible(p),
+					s.possible_max_future(p),
+					s.possible_maxmin_future(p),
+					s.possible_max_future2(p),
+				])),
+			(Sudoku::find_empty, |s: &Sudoku, p: [usize; 2]| combine(vec![
+					s.possible(p),
+					s.possible_max_future(p),
+					s.possible_maxmin_future(p),
+					s.possible_max_future2(p),
+				])),
+		];
+		solver.solve(x, &strategies)
+	} else {
+		let solver = BackTrackSolver::new(x, settings);
+		solver.solve(Sudoku::find_min_empty, Sudoku::possible)
+	};
+
+	let solution = solution.expect("Expected solution");
 
 	println!("Difference:");
 	solution.puzzle.print();
