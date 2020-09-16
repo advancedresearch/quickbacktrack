@@ -9,9 +9,9 @@
 //! but it takes 295 992 iterations to solve when looking for the first empty slot.
 //!
 //! One can explain this difference in performance using probability theory.
-//! If a slot can contain 2 correct out of N possible values, the odds are 2:N.
-//! When this slot is tangled through constraints with another slot with odds 1:M,
-//! the total odds become 2*1:N*M.
+//! If a slot can contain 2 correct out of N possible values, the odds are `2:(N-2)``.
+//! When this slot is tangled through constraints with another slot with odds `1:(M-1)``,
+//! the total odds become `2*1:(N-2)*(M-1)`.
 //! To maximize the chance of finding a correct solution, one must maximize the odds for the
 //! remaining moves or fail to satisfy the constraints as early as possible.
 //! Fewer choices reduces the chances of being wrong, increases the chance of failing constraints
