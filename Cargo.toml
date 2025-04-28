@@ -1,9 +1,9 @@
 [package]
 name = "quickbacktrack"
-version = "0.7.0"
+version = "0.7.1"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
-description = "Library for back tracking with customizable search for moves"
-keywords = ["back", "track", "puzzle", "procedural", "generation"]
+description = "Library for backtracking with customizable search for moves"
+keywords = ["backtrack", "puzzle", "procedural", "generation", "advancedresearch"]
 license = "MIT"
 repository = "https://github.com/bvssvni/quickbacktrack.git"
 homepage = "https://github.com/bvssvni/quickbacktrack"

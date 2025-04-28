@@ -150,8 +150,8 @@ fn main() {
             Some(x) => x.puzzle
         };
         answer.print();
-        println!("total weight: {}", answer.total_weight());
-        println!("total value: {}", answer.total_value());
+        println!("total weight: {:.2}", answer.total_weight());
+        println!("total value: {:.2}", answer.total_value());
         println!("~~~");
         target_value = answer.total_value();
     }
