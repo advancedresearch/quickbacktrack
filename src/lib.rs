@@ -693,7 +693,7 @@ impl<T> EntropyBackTrackSolver<T> where T: Puzzle {
         use std::thread::sleep;
         use std::time::Duration;
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut iterations: u64 = 0;
         loop {
             if self.settings.debug {
@@ -734,7 +734,7 @@ impl<T> EntropyBackTrackSolver<T> where T: Puzzle {
                     use rand::Rng;
 
                     let mut possible = g(&self.state, x);
-                    if rng.gen::<f64>() < self.entropy_settings.noise {
+                    if rng.random::<f64>() < self.entropy_settings.noise {
                         use rand::seq::SliceRandom;
                         possible.shuffle(&mut rng);
                         possible
